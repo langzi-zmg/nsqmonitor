@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"github.com/labstack/echo"
 	"gitlab.wallstcn.com/operation/nsqmonitor/service/middleware"
-	"gitlab.wallstcn.com/operation/nsqmonitor/service/api"
+	//"gitlab.wallstcn.com/operation/nsqmonitor/service/api"
 	"gitlab.wallstcn.com/operation/nsqmonitor/common"
+	"gitlab.wallstcn.com/operation/nsqmonitor/business"
 )
 
 var app = echo.New()
@@ -28,5 +29,11 @@ func RunServer() {
 
 func MountAPIModule(e *echo.Echo) {
 	apiv1 := e.Group("/v1")
-	api.MountAPI(apiv1)
+	MountAPI(apiv1)
+
+}
+
+func MountAPI(group *echo.Group) {
+	group.GET("/overview",business.HTTPGetOverview)
+	group.GET("/consumer",business.HTTPGetConsumer )
 }

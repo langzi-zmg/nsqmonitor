@@ -1,10 +1,12 @@
 package business
 
-import "github.com/parnurzeal/gorequest"
-import "errors"
 import (
+	"github.com/parnurzeal/gorequest"
+	"github.com/labstack/echo"
+    "errors"
 	"encoding/json"
 	"sort"
+	"gitlab.wallstcn.com/operation/nsqmonitor/helper"
 )
 
 type Topics struct {
@@ -101,16 +103,17 @@ type Consumer struct {
 	Ts           int    `json:"ts"`
 }
 
-const Url = "http://182.254.152.69:4171/api/topics"
-
 var TopicsALl Topics
 var OneTopicInfo TopicInfo
 
-var OverviewList = make([]Overview, 0, 100)
-var ConsumerList = make([]Consumer, 0, 100)
+const Url = "http://10.0.0.155:4171/api/topics"
 
-func GetMine() {
 
+
+func GetMine() ([]*Overview,[]*Consumer) {
+
+	var OverviewList = make([]*Overview,0,500)
+	var ConsumerList = make([]*Consumer,0, 500)
 	//get all topics
 	request := gorequest.New()
 	resp, body, errs := request.Get(Url).End()
@@ -120,62 +123,85 @@ func GetMine() {
 		print(newError)
 	}
 	json.Unmarshal([]byte(body), &TopicsALl)
-	topicSlience := make([]string, 0, 100)
-
 	for _, val := range TopicsALl.Topics {
-		topicSlience = append(topicSlience, val)
+		OverviewList,ConsumerList = GetTopicInfo(val,OverviewList,ConsumerList)
 	}
+	return OverviewList,ConsumerList
 
-	//get one topics everytime by use for loop
-	for _, val1 := range topicSlience {
-		request = gorequest.New()
-		resp, body, errs = request.Get(Url + "/" + val1).End()
-		if resp.StatusCode != 200 || len(errs) != 0 {
-			newError := errors.New("topicsUrl ERROR")
-			print(newError)
+}
+
+func GetTopicInfo(topicName string,OverviewList []*Overview,ConsumerList []*Consumer) ([]*Overview,[]*Consumer) {
+
+
+	request := gorequest.New()
+	resp, body, errs := request.Get(Url + "/" + topicName).End()
+	if resp.StatusCode != 200 || len(errs) != 0 {
+		newError := errors.New("topicsUrl ERROR")
+		print(newError)
+	}
+	json.Unmarshal([]byte(body), &OneTopicInfo)
+	var consumerDepthSum int64
+
+	producerDepthSum := OneTopicInfo.Depth
+
+	for _, val2 := range OneTopicInfo.Channels {
+
+		ts := make([]int, 100, 1000)
+		consumerDepthSum = consumerDepthSum + val2.Depth
+		for key, val3 := range val2.Clients {
+			ts[key] = val3.Connect_Ts
 		}
-		json.Unmarshal([]byte(body), &OneTopicInfo)
-		var consumerDepthSum int64
-
-		producerDepthSum := OneTopicInfo.Depth
-
-		for _, val2 := range OneTopicInfo.Channels {
-
-			ts := make([]int, 100, 1000)
-			consumerDepthSum = consumerDepthSum + val2.Depth
-			for key, val3 := range val2.Clients {
-				ts[key] = val3.Connect_Ts
-			}
-			sort.Sort(sort.Reverse(sort.IntSlice(ts)))
-			consumer := &Consumer{
-				val1,
-				val2.Channel_Name,
-				val2.Depth,
-				len(val2.Clients),
-				ts[0],
-			}
-			ConsumerList = append(ConsumerList, *consumer)
-			////fmt.Printf("topic name is %s and channel name is %s and depth is %d and connection is %d and last time is %d\n",
-			//	val1, val2.Channel_Name, val2.Depth, len(val2.Clients), ts[0])
-
-
+		sort.Sort(sort.Reverse(sort.IntSlice(ts)))
+		consumer := &Consumer{
+			topicName,
+			val2.Channel_Name,
+			val2.Depth,
+			len(val2.Clients),
+			ts[0],
 		}
-		overview := &Overview{
-			val1,
-			producerDepthSum,
-			consumerDepthSum,
-		}
-		OverviewList = append(OverviewList, *overview)
-		//fmt.Printf("topic name is %s and producer depth is %d and  the consumer  message depth is %d\n ",
-		//	val1, producerDepthSum, consumerDepthSum)
+		ConsumerList = append(ConsumerList, consumer)
 
 	}
-	//fmt.Println(ConsumerList)
-	//fmt.Println(OverviewList)
-	//jsonOverview,err := json.Marshal(OverviewList)
-	//if err != nil {
-	//	fmt.Println(err.Error())
-	//}
-	//fmt.Println(string(jsonOverview))
+	overview := &Overview{
+		topicName,
+		producerDepthSum,
+		consumerDepthSum,
+	}
+	OverviewList = append(OverviewList, overview)
+	return OverviewList,ConsumerList
+}
 
+
+
+type Pagination struct {
+	Page  int64 `json:"page" query:"page"`
+	Limit int64 `json:"limit" query:"limit"`
+}
+
+
+// @Title overview  list
+// @Description 获取overview list
+// @Accept  json
+// @Param page query int false "页数|默认1"
+// @Param limit query int false "每页条目数|默认10"
+// @Resource overview
+// @Router /v1/overview [get]
+
+
+func HTTPGetOverview(ctx echo.Context) error {
+	OverviewList,_ := GetMine()
+	return helper.SuccessResponse(ctx, &OverviewList)
+}
+
+// @Title consumer list by page and limit
+// @Description 获取consumer list by page and limit
+// @Accept  json
+// @Param page query int false "页数|默认1"
+// @Param limit query int false "每页条目数|默认10"
+// @Resource consumer
+// @Router /v1/consumer  [get]
+
+func HTTPGetConsumer(ctx echo.Context) error {
+	_,ConsumerList := GetMine()
+	return helper.SuccessResponse(ctx, &ConsumerList)
 }
