@@ -3,10 +3,13 @@ package business
 import (
 	"github.com/parnurzeal/gorequest"
 	"github.com/labstack/echo"
-    "errors"
+	"errors"
 	"encoding/json"
 	"sort"
 	"gitlab.wallstcn.com/operation/nsqmonitor/helper"
+	"flag"
+	"os"
+	"strings"
 )
 
 type Topics struct {
@@ -105,18 +108,19 @@ type Consumer struct {
 
 var TopicsALl Topics
 var OneTopicInfo TopicInfo
+var url = flag.String("url", os.Getenv("URL"), "url")
 
-const Url = "http://10.0.0.155:4171/api/topics"
+func GetMine() ([]*Overview, []*Consumer) {
 
+	flag.Parse()
+	// init
+	url := strings.Split(*url, ",")
 
-
-func GetMine() ([]*Overview,[]*Consumer) {
-
-	var OverviewList = make([]*Overview,0,500)
-	var ConsumerList = make([]*Consumer,0, 500)
+	var OverviewList = make([]*Overview, 0, 500)
+	var ConsumerList = make([]*Consumer, 0, 500)
 	//get all topics
 	request := gorequest.New()
-	resp, body, errs := request.Get(Url).End()
+	resp, body, errs := request.Get(url[0]).End()
 
 	if resp.StatusCode != 200 || len(errs) != 0 {
 		newError := errors.New("topicsUrl ERROR")
@@ -124,14 +128,13 @@ func GetMine() ([]*Overview,[]*Consumer) {
 	}
 	json.Unmarshal([]byte(body), &TopicsALl)
 	for _, val := range TopicsALl.Topics {
-		OverviewList,ConsumerList = GetTopicInfo(val,OverviewList,ConsumerList)
+		OverviewList, ConsumerList = GetTopicInfo(val, OverviewList, ConsumerList)
 	}
-	return OverviewList,ConsumerList
+	return OverviewList, ConsumerList
 
 }
 
-func GetTopicInfo(topicName string,OverviewList []*Overview,ConsumerList []*Consumer) ([]*Overview,[]*Consumer) {
-
+func GetTopicInfo(topicName string, OverviewList []*Overview, ConsumerList []*Consumer) ([]*Overview, []*Consumer) {
 
 	request := gorequest.New()
 	resp, body, errs := request.Get(Url + "/" + topicName).End()
@@ -168,16 +171,13 @@ func GetTopicInfo(topicName string,OverviewList []*Overview,ConsumerList []*Cons
 		consumerDepthSum,
 	}
 	OverviewList = append(OverviewList, overview)
-	return OverviewList,ConsumerList
+	return OverviewList, ConsumerList
 }
-
-
 
 type Pagination struct {
 	Page  int64 `json:"page" query:"page"`
 	Limit int64 `json:"limit" query:"limit"`
 }
-
 
 // @Title overview  list
 // @Description 获取overview list
@@ -187,9 +187,8 @@ type Pagination struct {
 // @Resource overview
 // @Router /v1/overview [get]
 
-
 func HTTPGetOverview(ctx echo.Context) error {
-	OverviewList,_ := GetMine()
+	OverviewList, _ := GetMine()
 	return helper.SuccessResponse(ctx, &OverviewList)
 }
 
@@ -202,6 +201,6 @@ func HTTPGetOverview(ctx echo.Context) error {
 // @Router /v1/consumer  [get]
 
 func HTTPGetConsumer(ctx echo.Context) error {
-	_,ConsumerList := GetMine()
+	_, ConsumerList := GetMine()
 	return helper.SuccessResponse(ctx, &ConsumerList)
 }
