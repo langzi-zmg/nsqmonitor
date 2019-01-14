@@ -108,19 +108,22 @@ type Consumer struct {
 
 var TopicsALl Topics
 var OneTopicInfo TopicInfo
-var url = flag.String("url", os.Getenv("URL"), "url")
+var url = flag.String("nsqadminurl", os.Getenv("NSQADMINURL"), "url")
 
+func GetUrl() string{
+	flag.Parse()
+	url := strings.Split(*url, ",")
+	nsqadmin_url := url[0]
+	return nsqadmin_url
+}
 func GetMine() ([]*Overview, []*Consumer) {
 
-	flag.Parse()
-	// init
-	url := strings.Split(*url, ",")
-
+	url := GetUrl()
 	var OverviewList = make([]*Overview, 0, 500)
 	var ConsumerList = make([]*Consumer, 0, 500)
 	//get all topics
 	request := gorequest.New()
-	resp, body, errs := request.Get(url[0]).End()
+	resp, body, errs := request.Get(url).End()
 
 	if resp.StatusCode != 200 || len(errs) != 0 {
 		newError := errors.New("topicsUrl ERROR")
@@ -136,8 +139,9 @@ func GetMine() ([]*Overview, []*Consumer) {
 
 func GetTopicInfo(topicName string, OverviewList []*Overview, ConsumerList []*Consumer) ([]*Overview, []*Consumer) {
 
+	url := GetUrl()
 	request := gorequest.New()
-	resp, body, errs := request.Get(Url + "/" + topicName).End()
+	resp, body, errs := request.Get(url + "/" + topicName).End()
 	if resp.StatusCode != 200 || len(errs) != 0 {
 		newError := errors.New("topicsUrl ERROR")
 		print(newError)
