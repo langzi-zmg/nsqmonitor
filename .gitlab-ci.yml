@@ -7,7 +7,7 @@ stages:
 variables:
   DOCKER_DRIVER: overlay
   SERVICE_NAME: nsqmonitor
-  NAMESPACE: default
+  NAMESPACE: common
   IMAGE_NAME: ccr.ccs.tencentyun.com/dhub.wallstcn.com/nsqmonitor
   CONTAINER_TEST_IMAGE: $IMAGE_NAME:$CI_BUILD_REF_NAME
   CONTAINER_RELEASE_IMAGE: $IMAGE_NAME:latest
