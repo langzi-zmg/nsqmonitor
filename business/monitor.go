@@ -131,6 +131,7 @@ func GetMine() ([]*Overview, []*Consumer) {
 	}
 	json.Unmarshal([]byte(body), &TopicsALl)
 	for _, val := range TopicsALl.Topics {
+		//fmt.Printf("=========val====%s\n",val)
 		OverviewList, ConsumerList = GetTopicInfo(val, OverviewList, ConsumerList)
 	}
 	return OverviewList, ConsumerList
@@ -152,8 +153,8 @@ func GetTopicInfo(topicName string, OverviewList []*Overview, ConsumerList []*Co
 	producerDepthSum := OneTopicInfo.Depth
 
 	for _, val2 := range OneTopicInfo.Channels {
-
-		ts := make([]int, 100, 10000)
+		//fmt.Printf("===============val2.Channel_Name=====%s\n",val2.Channel_Name)
+		ts := make([]int, 0,300 )
 		consumerDepthSum = consumerDepthSum + val2.Depth
 		for key, val3 := range val2.Clients {
 			ts[key] = val3.Connect_Ts
