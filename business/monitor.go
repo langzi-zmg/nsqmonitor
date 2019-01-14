@@ -154,7 +154,7 @@ func GetTopicInfo(topicName string, OverviewList []*Overview, ConsumerList []*Co
 
 	for _, val2 := range OneTopicInfo.Channels {
 		//fmt.Printf("===============val2.Channel_Name=====%s\n",val2.Channel_Name)
-		ts := make([]int, 0,300 )
+		ts := make([]int, 150,300 )
 		consumerDepthSum = consumerDepthSum + val2.Depth
 		for key, val3 := range val2.Clients {
 			ts[key] = val3.Connect_Ts
