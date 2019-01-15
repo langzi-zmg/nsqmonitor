@@ -189,12 +189,11 @@ func GetOneTopicInfo(topicName string, o1 chan *Overview, c1 chan *Consumer) {
 			ts[0],
 		}
 		c1 <- consumer
+		consumerData := &consumer
 		if val2.Depth > 1000 {
 			var emailParms  *xinge.EmailParms
-			emailParms.Content =  "TopicName:"+ consumer.Topic_Name +"   Channel_Name:" + consumer.Channel_Name + "   Depth:" + string(consumer.Depth)
-			emailParms.Receivers = []string{"sre@wallstreetcn.com"}
-			emailParms.Titile = "nsq depth warning"
-			rpcserver.SendPanicMail(emailParms)
+			emailParms.Content =  "TopicName:"+ consumerData.Topic_Name +"   Channel_Name:" + consumerData.Channel_Name + "   Depth:" + string(consumerData.Depth)
+			SendMail(emailParms)
 		}
 
 	}
@@ -205,16 +204,19 @@ func GetOneTopicInfo(topicName string, o1 chan *Overview, c1 chan *Consumer) {
 		consumerDepthSum,
 	}
 	o1 <- overview
-	if overview.Consumer_Depth_Sum > 1000 || overview.Producer_Depth_Sum > 1000 {
+	overviewData := &overview
+	if overviewData.Consumer_Depth_Sum > 1000 || overviewData.Producer_Depth_Sum > 1000 {
 		var emailParms  *xinge.EmailParms
-		emailParms.Content =  "TopicName:"+ overview.Topic_Name +"   ProducerDepthSum:" + string(overview.Producer_Depth_Sum) + "   ConsumerDepthSum:" + string(overview.Consumer_Depth_Sum)
-		emailParms.Receivers = []string{"sre@wallstreetcn.com"}
-		emailParms.Titile = "nsq depth warning"
-		rpcserver.SendPanicMail(emailParms)
+		emailParms.Content =  "TopicName:"+ overviewData.Topic_Name +"   ProducerDepthSum:" + string(overviewData.Producer_Depth_Sum) + "   ConsumerDepthSum:" + string(overviewData.Consumer_Depth_Sum)
+		SendMail(emailParms)
 	}
 	//return o1, c1
 }
-
+func SendMail(emailParms *xinge.EmailParms)  {
+	emailParms.Receivers = []string{"sre@wallstreetcn.com"}
+	emailParms.Titile = "nsq depth warning"
+	rpcserver.SendPanicMail(emailParms)
+}
 
 type Pagination struct {
 	Page  int64 `json:"page" query:"page"`
