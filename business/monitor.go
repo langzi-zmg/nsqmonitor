@@ -110,7 +110,7 @@ var TopicsALl Topics
 var OneTopicInfo TopicInfo
 var url = flag.String("nsqadminurl", os.Getenv("NSQADMINURL"), "url")
 
-func GetUrl() string{
+func GetUrl() string {
 	flag.Parse()
 	url := strings.Split(*url, ",")
 	nsqadmin_url := url[0]
@@ -130,15 +130,33 @@ func GetMine() ([]*Overview, []*Consumer) {
 		print(newError)
 	}
 	json.Unmarshal([]byte(body), &TopicsALl)
-	for _, val := range TopicsALl.Topics {
-		//fmt.Printf("=========val====%s\n",val)
-		OverviewList, ConsumerList = GetTopicInfo(val, OverviewList, ConsumerList)
+	chOverview := make(chan *Overview, 1000)
+	chConsumer := make(chan *Consumer, 1000)
+
+	//OverviewList, ConsumerList = GetTopicInfo(val, OverviewList, ConsumerList)
+	go func() {
+		for _, val := range TopicsALl.Topics {
+			s1, s2 := GetOneTopicInfo(val)
+			chOverview <- s1
+			chConsumer <- s2
+		}
+	}()
+
+	for i := 0; i < len(TopicsALl.Topics); i++ {
+		overview := <-chOverview
+		consumer := <-chConsumer
+		OverviewList = append(OverviewList, overview)
+		ConsumerList = append(ConsumerList, consumer)
+
 	}
+
+	defer close(chOverview)
+	defer close(chConsumer)
 	return OverviewList, ConsumerList
 
 }
 
-func GetTopicInfo(topicName string, OverviewList []*Overview, ConsumerList []*Consumer) ([]*Overview, []*Consumer) {
+func GetOneTopicInfo(topicName string) (*Overview, *Consumer) {
 
 	url := GetUrl()
 	request := gorequest.New()
@@ -152,31 +170,35 @@ func GetTopicInfo(topicName string, OverviewList []*Overview, ConsumerList []*Co
 
 	producerDepthSum := OneTopicInfo.Depth
 
+	var overview *Overview
+	var consumer *Consumer
+
 	for _, val2 := range OneTopicInfo.Channels {
+		ts := make([]int, 150, 300)
 		//fmt.Printf("===============val2.Channel_Name=====%s\n",val2.Channel_Name)
-		ts := make([]int, 150,300 )
 		consumerDepthSum = consumerDepthSum + val2.Depth
 		for key, val3 := range val2.Clients {
 			ts[key] = val3.Connect_Ts
 		}
 		sort.Sort(sort.Reverse(sort.IntSlice(ts)))
-		consumer := &Consumer{
+		consumer = &Consumer{
 			topicName,
 			val2.Channel_Name,
 			val2.Depth,
 			len(val2.Clients),
 			ts[0],
 		}
-		ConsumerList = append(ConsumerList, consumer)
+		//ConsumerList = append(ConsumerList, consumer)
 
 	}
-	overview := &Overview{
+	overview = &Overview{
 		topicName,
 		producerDepthSum,
 		consumerDepthSum,
 	}
-	OverviewList = append(OverviewList, overview)
-	return OverviewList, ConsumerList
+
+	//OverviewList = append(OverviewList, overview)
+	return overview, consumer
 }
 
 type Pagination struct {
