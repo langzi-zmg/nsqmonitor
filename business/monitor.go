@@ -10,6 +10,8 @@ import (
 	"flag"
 	"os"
 	"strings"
+	"gitlab.wallstcn.com/wscnbackend/ivankaprotocol/xinge"
+	"gitlab.wallstcn.com/operation/nsqmonitor/rpcserver"
 )
 
 type Topics struct {
@@ -187,6 +189,14 @@ func GetOneTopicInfo(topicName string, o1 chan *Overview, c1 chan *Consumer) {
 			ts[0],
 		}
 		c1 <- consumer
+		if val2.Depth > 1000 {
+			var emailParms  *xinge.EmailParms
+			emailParms.Content =  "TopicName:"+ consumer.Topic_Name +"   Channel_Name:" + consumer.Channel_Name + "   Depth:" + string(consumer.Depth)
+			emailParms.Receivers = []string{"sre@wallstreetcn.com"}
+			emailParms.Titile = "nsq depth warning"
+			rpcserver.SendPanicMail(emailParms)
+		}
+
 	}
 
 	overview = &Overview{
@@ -195,9 +205,16 @@ func GetOneTopicInfo(topicName string, o1 chan *Overview, c1 chan *Consumer) {
 		consumerDepthSum,
 	}
 	o1 <- overview
-
+	if overview.Consumer_Depth_Sum > 1000 || overview.Producer_Depth_Sum > 1000 {
+		var emailParms  *xinge.EmailParms
+		emailParms.Content =  "TopicName:"+ overview.Topic_Name +"   ProducerDepthSum:" + string(overview.Producer_Depth_Sum) + "   ConsumerDepthSum:" + string(overview.Consumer_Depth_Sum)
+		emailParms.Receivers = []string{"sre@wallstreetcn.com"}
+		emailParms.Titile = "nsq depth warning"
+		rpcserver.SendPanicMail(emailParms)
+	}
 	//return o1, c1
 }
+
 
 type Pagination struct {
 	Page  int64 `json:"page" query:"page"`
