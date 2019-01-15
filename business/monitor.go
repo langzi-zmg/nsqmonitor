@@ -191,7 +191,7 @@ func GetOneTopicInfo(topicName string, o1 chan *Overview, c1 chan *Consumer) {
 		if consumer != nil {
 			c1 <- consumer
 		}
-		if val2.Depth > 1000 {
+		if val2.Depth > 1000 && consumer != nil{
 			var emailParms *xinge.EmailParms
 			emailParms.Content = "TopicName:" + consumer.Topic_Name + "   Channel_Name:" + consumer.Channel_Name + "   Depth:" + string(consumer.Depth)
 			SendMail(emailParms)
