@@ -106,8 +106,6 @@ type Consumer struct {
 	Ts           int    `json:"ts"`
 }
 
-var TopicsALl Topics
-var OneTopicInfo TopicInfo
 var url = flag.String("nsqadminurl", os.Getenv("NSQADMINURL"), "url")
 
 func GetUrl() string {
@@ -116,11 +114,13 @@ func GetUrl() string {
 	nsqadmin_url := url[0]
 	return nsqadmin_url
 }
+
 func GetMine() ([]*Overview, []*Consumer) {
 
+	var TopicsALl Topics
 	url := GetUrl()
-	var OverviewList = make([]*Overview, 0, 500)
-	var ConsumerList = make([]*Consumer, 0, 500)
+	var OverviewList = []*Overview{}
+	var ConsumerList = []*Consumer{}
 	//get all topics
 	request := gorequest.New()
 	resp, body, errs := request.Get(url).End()
@@ -130,17 +130,15 @@ func GetMine() ([]*Overview, []*Consumer) {
 		print(newError)
 	}
 	json.Unmarshal([]byte(body), &TopicsALl)
-	chOverview := make(chan *Overview, 1000)
-	chConsumer := make(chan *Consumer, 1000)
 
 	//OverviewList, ConsumerList = GetTopicInfo(val, OverviewList, ConsumerList)
-	go func() {
-		for _, val := range TopicsALl.Topics {
-			s1, s2 := GetOneTopicInfo(val)
-			chOverview <- s1
-			chConsumer <- s2
-		}
-	}()
+	var chOverview = make(chan *Overview, 1000)
+	var chConsumer = make(chan *Consumer, 1000)
+
+	for i := range TopicsALl.Topics {
+		val := TopicsALl.Topics[i]
+		go GetOneTopicInfo(val, chOverview, chConsumer)
+	}
 
 	for i := 0; i < len(TopicsALl.Topics); i++ {
 		overview := <-chOverview
@@ -156,8 +154,9 @@ func GetMine() ([]*Overview, []*Consumer) {
 
 }
 
-func GetOneTopicInfo(topicName string) (*Overview, *Consumer) {
+func GetOneTopicInfo(topicName string, o1 chan *Overview, c1 chan *Consumer) {
 
+	var OneTopicInfo TopicInfo
 	url := GetUrl()
 	request := gorequest.New()
 	resp, body, errs := request.Get(url + "/" + topicName).End()
@@ -174,8 +173,7 @@ func GetOneTopicInfo(topicName string) (*Overview, *Consumer) {
 	var consumer *Consumer
 
 	for _, val2 := range OneTopicInfo.Channels {
-		ts := make([]int, 150, 300)
-		//fmt.Printf("===============val2.Channel_Name=====%s\n",val2.Channel_Name)
+		ts := make([]int, 500, 1000)
 		consumerDepthSum = consumerDepthSum + val2.Depth
 		for key, val3 := range val2.Clients {
 			ts[key] = val3.Connect_Ts
@@ -188,17 +186,17 @@ func GetOneTopicInfo(topicName string) (*Overview, *Consumer) {
 			len(val2.Clients),
 			ts[0],
 		}
-		//ConsumerList = append(ConsumerList, consumer)
-
+		c1 <- consumer
 	}
+
 	overview = &Overview{
 		topicName,
 		producerDepthSum,
 		consumerDepthSum,
 	}
+	o1 <- overview
 
-	//OverviewList = append(OverviewList, overview)
-	return overview, consumer
+	//return o1, c1
 }
 
 type Pagination struct {
