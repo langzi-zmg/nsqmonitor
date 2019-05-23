@@ -1,17 +1,18 @@
 package business
 
 import (
-	"github.com/parnurzeal/gorequest"
-	"github.com/labstack/echo"
-	"errors"
 	"encoding/json"
-	"sort"
-	"gitlab.wallstcn.com/operation/nsqmonitor/helper"
+	"errors"
 	"flag"
-	"os"
-	"strings"
-	"gitlab.wallstcn.com/wscnbackend/ivankaprotocol/xinge"
+	"fmt"
+	"github.com/labstack/echo"
+	"github.com/parnurzeal/gorequest"
+	"gitlab.wallstcn.com/operation/nsqmonitor/helper"
 	"gitlab.wallstcn.com/operation/nsqmonitor/rpcserver"
+	"gitlab.wallstcn.com/wscnbackend/ivankaprotocol/xinge"
+	"os"
+	"sort"
+	"strings"
 )
 
 type Topics struct {
@@ -188,6 +189,8 @@ func GetOneTopicInfo(topicName string, o1 chan *Overview, c1 chan *Consumer) {
 			len(val2.Clients),
 			ts[0],
 		}
+		fmt.Println("consumer.Clients...........")
+		fmt.Sprintf("topic_name is %sand the num of clients is %d and channel name is %s",consumer.Topic_Name,consumer.Clients,consumer.Channel_Name)
 		if consumer != nil {
 			c1 <- consumer
 		}

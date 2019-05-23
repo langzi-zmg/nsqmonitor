@@ -18,7 +18,7 @@ func main() {
 	c := cron.New()
 	spec := os.Getenv("CRONTIME")
 	c.AddFunc(spec, func() {
-		business.GetMine()
+		business.CronSendMail()
 	})
 	c.Start()
 
